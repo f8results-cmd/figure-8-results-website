@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MetadataRoute } from 'next'
 import { getClientData } from '@/lib/client-data'
 

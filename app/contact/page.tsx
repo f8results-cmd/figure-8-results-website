@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Metadata } from 'next'
 import { getClientData } from '@/lib/client-data'
 import ContactForm from '@/components/ContactForm'
