@@ -1,97 +1,71 @@
 // @ts-nocheck
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { getClientData } from '@/lib/client-data';
 
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const data = getClientData();
+  return {
+    metadataBase: new URL(data.website || process.env.NEXT_PUBLIC_SITE_URL || 'https://localhost:3000'),
+    title: { default: data.seo?.meta_title ?? data.business_name ?? '', template: `%s | ${data.business_name ?? ''}` },
+    description: data.seo?.meta_description ?? '',
+    openGraph: {
+      type: 'website',
+      locale: 'en_AU',
+      siteName: data.business_name ?? '',
+      title: data.seo?.meta_title ?? '',
+      description: data.seo?.meta_description ?? '',
+    },
+    twitter: { card: 'summary_large_image', title: data.seo?.meta_title ?? '', description: data.seo?.meta_description ?? '' },
+    icons: data.branding?.favicon_url ? { icon: data.branding.favicon_url } : undefined,
+  };
+}
 
-const clientData = getClientData();
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const data = getClientData();
+  const siteUrl = data.website || process.env.NEXT_PUBLIC_SITE_URL || '';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://figure8results.com.au'),
-  title: clientData.seo.meta_title,
-  description: clientData.seo.meta_description,
-  openGraph: {
-    type: 'website',
-    locale: 'en_AU',
-    siteName: clientData.business.name,
-    title: clientData.seo.meta_title,
-    description: clientData.seo.meta_description,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: clientData.seo.meta_title,
-    description: clientData.seo.meta_description,
-  },
-  icons: {
-    icon: clientData.branding.favicon_url,
-  },
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
   const localBusinessSchema = {
     '@context': 'https://schema.org',
-    '@type': 'ProfessionalService',
-    name: clientData.business.name,
-    image: clientData.branding.logo_url,
-    '@id': process.env.NEXT_PUBLIC_SITE_URL || 'https://figure8results.com.au',
-    url: process.env.NEXT_PUBLIC_SITE_URL || 'https://figure8results.com.au',
-    telephone: clientData.business.phone,
-    email: clientData.business.email,
+    '@type': 'LocalBusiness',
+    name: data.business_name ?? '',
+    image: data.branding?.logo_url ?? undefined,
+    '@id': siteUrl,
+    url: siteUrl,
+    telephone: data.phone ?? '',
+    email: data.business?.email ?? '',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: clientData.business.address,
-      addressLocality: clientData.business.city,
-      addressRegion: clientData.business.state,
+      streetAddress: data.business?.address ?? '',
+      addressLocality: data.business?.city ?? '',
+      addressRegion: data.business?.state ?? '',
       addressCountry: 'AU',
     },
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: -34.9285,
-      longitude: 138.6007,
-    },
-    areaServed: clientData.service_areas.map(area => ({
-      '@type': 'City',
-      name: area,
-    })),
-    priceRange: '$$',
-    aggregateRating: clientData.reviews.count > 0 ? {
-      '@type': 'AggregateRating',
-      ratingValue: clientData.reviews.rating,
-      reviewCount: clientData.reviews.count,
-    } : undefined,
+    areaServed: (data.service_areas ?? []).map((area: string) => ({ '@type': 'City', name: area })),
+    ...(data.reviews?.count > 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: data.reviews.rating,
+        reviewCount: data.reviews.count,
+      },
+    } : {}),
   };
 
   return (
-    <html lang="en-AU" className={inter.className}>
+    <html lang="en-AU">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
         />
-        {clientData.analytics.google_tag_id && (
+        {data.analytics?.google_tag_id && (
           <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${clientData.analytics.google_tag_id}`} />
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${data.analytics.google_tag_id}`} />
             <script
               dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${clientData.analytics.google_tag_id}');
-                `,
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${data.analytics.google_tag_id}');`,
               }}
             />
           </>
