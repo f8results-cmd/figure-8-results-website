@@ -2,14 +2,14 @@ import clientDataJson from '../client-data.json';
 
 export interface Business {
   name: string;
-  tagline: string;
+  tagline: string | null;
   phone: string;
   email: string;
   address: string;
   city: string;
   state: string;
   niche: string;
-  years_in_business: number;
+  years_in_business: number | null;
   license_number: string | null;
   owner_name: string;
   ghl_webhook_url: string | null;
@@ -18,10 +18,10 @@ export interface Business {
 }
 
 export interface Branding {
-  primary_colour: string;
-  accent_colour: string;
-  logo_url: string;
-  favicon_url: string;
+  primary_colour: string | null;
+  accent_colour: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
 }
 
 export interface SEO {
@@ -52,6 +52,12 @@ export interface BlogPost {
   body_html?: string;
   published_at?: string;
   author?: string;
+  schema_json?: string;
+  date?: string;
+  excerpt?: string;
+  category?: string;
+  read_time?: string;
+  related_services?: string[];
 }
 
 export interface Pages {
@@ -59,7 +65,6 @@ export interface Pages {
     hero_headline: string;
     trust_signals: string[];
     service_areas: string[];
-    faqs?: FAQ[];
   };
   about?: {
     body_html?: string;
@@ -81,13 +86,47 @@ export interface ClientData {
   branding: Branding;
   seo: SEO;
   services: Service[];
-  pages: Pages;
   service_areas: string[];
+  pages: Pages;
   reviews: Reviews;
   analytics: Analytics;
-  blog?: BlogPost[];
+  blog_posts: BlogPost[];
+  business_name: string;
+  phone: string;
+  website: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const raw = clientDataJson as any;
+
 export function getClientData(): ClientData {
-  return clientDataJson as ClientData;
+  const siteUrl: string =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : '');
+
+  const blog_posts: BlogPost[] = ((raw.blog_posts as BlogPost[]) || []).map(
+    (post: BlogPost) => ({
+      ...post,
+      date: post.published_at || '',
+      excerpt: post.meta_description || '',
+      category: post.category || 'General',
+    })
+  );
+
+  return {
+    business: raw.business as Business,
+    branding: raw.branding as Branding,
+    seo: raw.seo as SEO,
+    services: (raw.services as Service[]) || [],
+    service_areas: (raw.service_areas as string[]) || [],
+    pages: raw.pages as Pages,
+    reviews: raw.reviews as Reviews,
+    analytics: raw.analytics as Analytics,
+    blog_posts,
+    business_name: (raw.business as Business).name,
+    phone: (raw.business as Business).phone,
+    website: siteUrl,
+  };
 }
