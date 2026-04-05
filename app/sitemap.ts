@@ -1,60 +1,31 @@
-// @ts-nocheck
-import { MetadataRoute } from 'next'
-import { getClientData } from '@/lib/client-data'
+import { MetadataRoute } from 'next';
+import { getClientData } from '@/lib/client-data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const clientData = getClientData()
-  const baseUrl = clientData.business.website
+  const data = getClientData();
+  const baseUrl = data.website;
 
-  // Main pages
-  const routes = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/services`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-  ]
+  const staticPages: MetadataRoute.Sitemap = [
+    { url: baseUrl, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
+    { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${baseUrl}/services`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
+  ];
 
-  // Service pages
-  const serviceRoutes = clientData.services.map((service) => ({
+  const servicePages: MetadataRoute.Sitemap = data.services.map((service) => ({
     url: `${baseUrl}/services/${service.slug}`,
     lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
+    changeFrequency: 'monthly',
     priority: 0.85,
-  }))
+  }));
 
-  // Blog posts
-  const blogRoutes = clientData.blog_posts.map((post) => ({
+  const blogPages: MetadataRoute.Sitemap = data.blog_posts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.date),
-    changeFrequency: 'monthly' as const,
-    priority: 0.6,
-  }))
+    lastModified: post.date ? new Date(post.date) : new Date(),
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  }));
 
-  return [...routes, ...serviceRoutes, ...blogRoutes]
+  return [...staticPages, ...servicePages, ...blogPages];
 }
