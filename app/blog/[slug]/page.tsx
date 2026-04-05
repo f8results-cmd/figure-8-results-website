@@ -1,107 +1,88 @@
 // @ts-nocheck
-import { Metadata } from 'next'
-import { getClientData } from '@/lib/client-data'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { Calendar, User, ArrowLeft, Phone, CheckCircle2 } from 'lucide-react'
+import { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getClientData } from '@/lib/client-data';
 
-interface BlogPostPageProps {
-  params: {
-    slug: string
-  }
+interface Props {
+  params: { slug: string };
 }
 
 export async function generateStaticParams() {
-  const clientData = getClientData()
-  return clientData.blog_posts.map((post) => ({
-    slug: post.slug,
-  }))
+  const data = getClientData();
+  const posts = data.blog_posts ?? [];
+  return posts.map((post) => ({ slug: post.slug }));
 }
 
-export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-  const clientData = getClientData()
-  const post = clientData.blog_posts.find((p) => p.slug === params.slug)
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const data = getClientData();
+  const posts = data.blog_posts ?? [];
+  const post = posts.find((p) => p.slug === params.slug);
+  if (!post) return { title: 'Post Not Found' };
 
-  if (!post) {
-    return {
-      title: 'Post Not Found',
-    }
-  }
-
-  const business = clientData.business
+  const businessName = data.business_name ?? data.business?.name ?? '';
+  const siteUrl = data.website ?? '';
+  const title = `${post.title} | ${businessName}`;
+  const description = post.meta_description || post.excerpt || '';
+  const authors: string[] = post.author ? [post.author] : businessName ? [businessName] : [];
 
   return {
-    title: `${post.title} | ${business.name}`,
-    description: post.excerpt,
+    title,
+    description,
     openGraph: {
-      title: post.title,
-      description: post.excerpt,
-      url: `${business.website}/blog/${post.slug}`,
-      siteName: business.name,
+      title,
+      description,
+      url: siteUrl ? `${siteUrl}/blog/${post.slug}` : undefined,
+      siteName: businessName || undefined,
       locale: 'en_AU',
       type: 'article',
-      publishedTime: post.date,
-      authors: [post.author],
+      publishedTime: post.published_at || post.date || undefined,
+      authors,
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description: post.excerpt,
-    },
-    alternates: {
-      canonical: `${business.website}/blog/${post.slug}`,
-    },
-  }
+    twitter: { card: 'summary_large_image', title, description },
+    alternates: siteUrl ? { canonical: `${siteUrl}/blog/${post.slug}` } : undefined,
+  };
 }
 
-export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const clientData = getClientData()
-  const post = clientData.blog_posts.find((p) => p.slug === params.slug)
+export default function BlogPostPage({ params }: Props) {
+  const data = getClientData();
+  const posts = data.blog_posts ?? [];
+  const post = posts.find((p) => p.slug === params.slug);
+  if (!post) notFound();
 
-  if (!post) {
-    notFound()
-  }
+  const businessName = data.business_name ?? data.business?.name ?? '';
+  const phone = data.phone ?? data.business?.phone ?? '';
+  const siteUrl = data.website ?? '';
 
-  const business = clientData.business
+  const postDate = post.published_at || post.date
+    ? new Date(post.published_at || post.date)
+    : null;
+  const formattedDate = postDate
+    ? postDate.toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-AU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
-  // Get related posts (same category, excluding current)
-  const relatedPosts = clientData.blog_posts
-    .filter((p) => p.category === post.category && p.slug !== post.slug)
-    .slice(0, 3)
-
-  // Article Schema
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
-    description: post.excerpt,
-    author: {
-      '@type': 'Person',
-      name: post.author,
-    },
+    description: post.meta_description || post.excerpt || '',
+    datePublished: post.published_at || post.date || '',
+    dateModified: post.published_at || post.date || '',
+    author: { '@type': 'Organization', name: businessName, url: siteUrl },
     publisher: {
       '@type': 'Organization',
-      name: business.name,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${business.website}/logo.png`,
-      },
+      name: businessName,
+      url: siteUrl,
+      logo: { '@type': 'ImageObject', url: siteUrl ? `${siteUrl}/logo.png` : '' },
     },
-    datePublished: post.date,
-    dateModified: post.date,
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `${business.website}/blog/${post.slug}`,
+      '@id': siteUrl ? `${siteUrl}/blog/${post.slug}` : '',
     },
-  }
+  };
+
+  const relatedPosts = posts.filter((p) => p.slug !== post.slug).slice(0, 3);
+  const phoneClean = phone.replace(/\s/g, '');
 
   return (
     <>
@@ -109,184 +90,127 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
-
-      {/* Breadcrumb & Back Link */}
-      <section className="bg-[#F8F9FA] py-6 border-b border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 text-[#213872] hover:text-[#f25f22] font-semibold transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Blog
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Article Header */}
-      <article className="py-12 md:py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="inline-block px-4 py-2 bg-[#213872] text-white text-sm font-semibold rounded-full mb-6">
-              {post.category}
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#213872] mb-6">
-              {post.title}
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8">
-              {post.excerpt}
-            </p>
-            <div className="flex flex-wrap items-center gap-6 text-gray-500 pb-8 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5" />
-                <span className="font-semibold">{post.author}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                <span>{formatDate(post.date)}</span>
-              </div>
-              <div className="text-sm">
-                <span className="font-semibold">5 min read</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      {/* Article Content */}
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="prose prose-lg max-w-none">
-              {post.content.map((section, index) => (
-                <div key={index} className="mb-8">
-                  <h2 className="text-2xl md:text-3xl font-bold text-[#213872] mb-4">
-                    {section.heading}
-                  </h2>
-                  <p className="text-gray-700 leading-relaxed mb-4 text-lg">
-                    {section.content}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Key Takeaways Box */}
-            <div className="bg-gradient-to-br from-[#213872] to-[#1a2d5a] p-8 rounded-xl text-white mt-12">
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                <CheckCircle2 className="w-7 h-7 text-[#f25f22]" />
-                Key Takeaways
-              </h3>
-              <ul className="space-y-3">
-                {post.content.slice(0, 3).map((section, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-[#f25f22] flex-shrink-0 mt-1" />
-                    <span className="text-gray-100">{section.heading}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 bg-[#F8F9FA]">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto bg-gradient-to-br from-[#213872] to-[#1a2d5a] p-8 md:p-12 rounded-2xl text-white text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Implement These Strategies?
-            </h2>
-            <p className="text-xl text-gray-200 mb-8">
-              Let {business.name} create a custom marketing plan for your Adelaide business
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center gap-2 bg-[#f25f22] text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#d94e15] transition-all hover:scale-105 shadow-lg"
-              >
-                Get Your Free Consultation
-              </Link>
-              <a
-                href={`tel:${business.phone}`}
-                className="inline-flex items-center justify-center gap-2 bg-white text-[#213872] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all"
-              >
-                <Phone className="w-5 h-5" />
-                {business.phone}
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Related Posts */}
-      {relatedPosts.length > 0 && (
-        <section className="py-16 md:py-20 bg-white">
+      <main className="min-h-screen bg-white">
+        {/* Hero */}
+        <section className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white py-12 md:py-16">
           <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-[#213872] mb-12 text-center">
-                Related Articles
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {relatedPosts.map((relatedPost) => (
-                  <article
-                    key={relatedPost.slug}
-                    className="bg-[#F8F9FA] rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group"
-                  >
-                    <div className="p-6">
-                      <div className="inline-block px-3 py-1 bg-[#213872] text-white text-xs font-semibold rounded-full mb-4">
-                        {relatedPost.category}
-                      </div>
-                      <h3 className="text-xl font-bold text-[#213872] mb-3 group-hover:text-[#f25f22] transition-colors">
-                        {relatedPost.title}
-                      </h3>
-                      <p className="text-gray-600 mb-4 line-clamp-2">
-                        {relatedPost.excerpt}
-                      </p>
-                      <Link
-                        href={`/blog/${relatedPost.slug}`}
-                        className="inline-flex items-center gap-2 text-[#f25f22] font-semibold hover:gap-3 transition-all"
-                      >
-                        Read More
-                        <ArrowLeft className="w-4 h-4 rotate-180" />
-                      </Link>
+            <div className="max-w-4xl mx-auto">
+              <Link href="/blog" className="inline-flex items-center text-white/90 hover:text-white mb-6 transition-colors">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Blog
+              </Link>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                {post.category && (
+                  <span className="bg-white text-[var(--color-primary)] text-xs font-semibold px-3 py-1 rounded-full uppercase">
+                    {post.category}
+                  </span>
+                )}
+                {formattedDate && <span className="text-white/90 text-sm">{formattedDate}</span>}
+                {post.read_time && <span className="text-white/90 text-sm">{post.read_time}</span>}
+              </div>
+              <h1 className="text-3xl md:text-5xl font-bold mb-4">{post.title}</h1>
+              {(post.excerpt || post.meta_description) && (
+                <p className="text-xl text-white/90">{post.excerpt || post.meta_description}</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Content */}
+        <article className="py-12 md:py-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              {post.body_html ? (
+                <div
+                  className="prose prose-lg max-w-none"
+                  dangerouslySetInnerHTML={{ __html: post.body_html }}
+                />
+              ) : (
+                <p className="text-gray-600 text-lg">Content coming soon.</p>
+              )}
+
+              {/* CTA box */}
+              {businessName && (
+                <div className="mt-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg p-8 text-white">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold mb-2">Need Professional Help?</h3>
+                      <p className="text-white/90">Contact {businessName} today — local experts ready to help.</p>
                     </div>
+                    {phone && (
+                      <a
+                        href={`tel:${phoneClean}`}
+                        className="inline-flex items-center bg-white text-[var(--color-primary)] px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                      >
+                        <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {phone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </article>
+
+        {/* Related posts */}
+        {relatedPosts.length > 0 && (
+          <section className="py-12 bg-gray-50">
+            <div className="container mx-auto px-4 max-w-6xl">
+              <h2 className="text-3xl font-bold mb-8">Related Articles</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                {relatedPosts.map((rp) => (
+                  <article key={rp.slug} className="bg-white rounded-lg overflow-hidden hover:shadow-xl transition-shadow">
+                    <Link href={`/blog/${rp.slug}`} className="block p-6">
+                      {rp.category && (
+                        <span className="bg-[var(--color-primary)] text-white text-xs font-semibold px-3 py-1 rounded-full uppercase mb-4 inline-block">
+                          {rp.category}
+                        </span>
+                      )}
+                      <h3 className="text-xl font-bold mb-3">{rp.title}</h3>
+                      {(rp.excerpt || rp.meta_description) && (
+                        <p className="text-gray-700 mb-4 line-clamp-3">{rp.excerpt || rp.meta_description}</p>
+                      )}
+                      <span className="text-[var(--color-primary)] font-semibold">Read More →</span>
+                    </Link>
                   </article>
                 ))}
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* Author Bio */}
-      <section className="py-12 bg-[#F8F9FA] border-t border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-start gap-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#213872] to-[#1a2d5a] flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                {post.author.charAt(0)}
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-[#213872] mb-2">
-                  Written by {post.author}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {post.author} is a marketing specialist at {business.name}, helping Adelaide businesses grow through data-driven digital marketing strategies.
-                </p>
+        {/* Bottom CTA */}
+        {businessName && (
+          <section className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] py-16">
+            <div className="container mx-auto px-4 text-center">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                Ready to Work with {businessName}?
+              </h2>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                {phone && (
+                  <a
+                    href={`tel:${phoneClean}`}
+                    className="inline-flex items-center justify-center bg-white text-[var(--color-primary)] px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors"
+                  >
+                    Call {phone}
+                  </a>
+                )}
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 text-[#f25f22] font-semibold hover:gap-3 transition-all"
+                  className="inline-flex items-center justify-center border-2 border-white text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-white hover:text-[var(--color-primary)] transition-colors"
                 >
-                  Get in touch with our team
-                  <ArrowLeft className="w-4 h-4 rotate-180" />
+                  Get a Free Quote
                 </Link>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        )}
+      </main>
     </>
-  )
+  );
 }
