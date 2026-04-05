@@ -12,9 +12,11 @@ module.exports = {
         accent: '#f25f22',
         secondary: '#F8F9FA',
         textColor: '#1A1A2E',
+        backgroundColor: '#FFFFFF',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
       },
     },
   },

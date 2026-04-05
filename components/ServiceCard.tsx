@@ -7,32 +7,71 @@ interface ServiceCardProps {
 }
 
 export default function ServiceCard({ title, slug, description }: ServiceCardProps) {
-  const displayTitle = title.replace(' | Figure 8 Results', '');
+  // Extract a cleaner display title (remove business name and pipes)
+  const displayTitle = title
+    .replace(/\|.*$/, '')
+    .replace(/Figure 8 Results/gi, '')
+    .trim();
 
   return (
-    <Link href={`/services/${slug}`} className="group">
-      <div className="bg-white border-2 border-gray-200 rounded-lg p-6 h-full hover:border-[#f25f22] hover:shadow-xl transition-all duration-300">
-        <div className="flex items-start gap-4">
-          <div className="bg-[#213872] text-white p-3 rounded-lg group-hover:bg-[#f25f22] transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-[#1A1A2E] mb-2 group-hover:text-[#213872] transition-colors">
-              {displayTitle}
-            </h3>
-            {description && (
-              <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
-            )}
-            <div className="mt-4 flex items-center text-[#f25f22] font-semibold group-hover:gap-2 transition-all">
-              <span>Learn more</span>
-              <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </div>
-          </div>
+    <Link
+      href={`/services/${slug}`}
+      className="group block bg-white rounded-lg border border-gray-200 p-6 hover:border-primary hover:shadow-lg transition-all duration-300"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="p-3 bg-secondary rounded-lg group-hover:bg-primary/10 transition-colors">
+          <svg
+            className="w-6 h-6 text-primary"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
         </div>
+        <svg
+          className="w-5 h-5 text-gray-400 group-hover:text-accent group-hover:translate-x-1 transition-all"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </div>
+      
+      <h3 className="text-lg font-semibold text-textColor mb-2 group-hover:text-primary transition-colors">
+        {displayTitle}
+      </h3>
+      
+      {description && (
+        <p className="text-gray-600 text-sm line-clamp-3">{description}</p>
+      )}
+      
+      <div className="mt-4 inline-flex items-center text-primary font-medium text-sm group-hover:text-accent transition-colors">
+        Learn more
+        <svg
+          className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
       </div>
     </Link>
   );

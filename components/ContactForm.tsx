@@ -3,9 +3,18 @@
 import { useState, FormEvent } from 'react';
 import { getClientData } from '@/lib/client-data';
 
+interface FormData {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  service: string;
+  message: string;
+}
+
 export default function ContactForm() {
-  const clientData = getClientData();
-  const [formData, setFormData] = useState({
+  const data = getClientData();
+  const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
     phone: '',
@@ -13,39 +22,28 @@ export default function ContactForm() {
     service: '',
     message: '',
   });
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSubmit = async (e: FormEvent) => {
+  const services = data?.services ?? [];
+  const webhookUrl = data?.business?.ghl_webhook_url;
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setStatus('submitting');
+    setStatus('loading');
     setErrorMessage('');
 
-    if (!clientData.business.ghl_webhook_url) {
-      setStatus('error');
-      setErrorMessage('Contact form is not configured. Please call us directly.');
-      return;
-    }
-
-    try {
-      const payload = {
-        ...formData,
-        source: 'website',
-        tags: ['website-lead'],
-      };
-
-      const response = await fetch(clientData.business.ghl_webhook_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Form submission failed');
-      }
-
+    // If no webhook URL, show fallback message
+    if (!webhookUrl) {
       setStatus('success');
       setFormData({
         firstName: '',
@@ -55,132 +53,171 @@ export default function ContactForm() {
         service: '',
         message: '',
       });
+      return;
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setStatus('success');
+        setFormData({
+          firstName: '',
+          lastName: '',
+          phone: '',
+          email: '',
+          service: '',
+          message: '',
+        });
+      } else {
+        throw new Error('Failed to submit form');
+      }
     } catch (error) {
       setStatus('error');
-      setErrorMessage('Something went wrong. Please try again or call us directly.');
+      setErrorMessage('Something went wrong. Please try calling us directly.');
+      console.error('Form submission error:', error);
     }
   };
-
-  if (status === 'success') {
-    return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
-        <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <h3 className="text-2xl font-bold text-green-800 mb-2">Thank You!</h3>
-        <p className="text-green-700">We've received your message and will get back to you shortly.</p>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="firstName" className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+          <label htmlFor="firstName" className="block text-sm font-medium text-textColor mb-2">
             First Name *
           </label>
           <input
             type="text"
             id="firstName"
-            required
+            name="firstName"
             value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#213872] focus:border-transparent outline-none transition-all"
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            placeholder="John"
           />
         </div>
 
         <div>
-          <label htmlFor="lastName" className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+          <label htmlFor="lastName" className="block text-sm font-medium text-textColor mb-2">
             Last Name *
           </label>
           <input
             type="text"
             id="lastName"
-            required
+            name="lastName"
             value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#213872] focus:border-transparent outline-none transition-all"
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            placeholder="Smith"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="phone" className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-            Phone *
+          <label htmlFor="phone" className="block text-sm font-medium text-textColor mb-2">
+            Phone Number *
           </label>
           <input
             type="tel"
             id="phone"
-            required
+            name="phone"
             value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#213872] focus:border-transparent outline-none transition-all"
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            placeholder="0412 345 678"
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-            Email *
+          <label htmlFor="email" className="block text-sm font-medium text-textColor mb-2">
+            Email Address *
           </label>
           <input
             type="email"
             id="email"
-            required
+            name="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#213872] focus:border-transparent outline-none transition-all"
+            onChange={handleChange}
+            required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            placeholder="john@example.com"
           />
         </div>
       </div>
 
-      <div>
-        <label htmlFor="service" className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-          Service Interested In
-        </label>
-        <select
-          id="service"
-          value={formData.service}
-          onChange={(e) => setFormData({ ...formData, service: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#213872] focus:border-transparent outline-none transition-all"
-        >
-          <option value="">Select a service</option>
-          {clientData.services.map((service) => (
-            <option key={service.slug} value={service.title}>
-              {service.title.replace(' | Figure 8 Results', '')}
-            </option>
-          ))}
-        </select>
-      </div>
+      {services.length > 0 && (
+        <div>
+          <label htmlFor="service" className="block text-sm font-medium text-textColor mb-2">
+            Service Interested In
+          </label>
+          <select
+            id="service"
+            name="service"
+            value={formData.service}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          >
+            <option value="">Select a service</option>
+            {services.map((service) => (
+              <option key={service.slug} value={service.title}>
+                {service.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
-        <label htmlFor="message" className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+        <label htmlFor="message" className="block text-sm font-medium text-textColor mb-2">
           Message *
         </label>
         <textarea
           id="message"
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
           required
           rows={5}
-          value={formData.message}
-          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#213872] focus:border-transparent outline-none transition-all resize-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+          placeholder="Tell us about your business and marketing goals..."
         />
       </div>
 
+      {status === 'success' && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-800 font-medium">
+            Thank you for your message! We'll get back to you within 24 hours.
+          </p>
+        </div>
+      )}
+
       {status === 'error' && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {errorMessage}
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-800 font-medium">{errorMessage}</p>
         </div>
       )}
 
       <button
         type="submit"
-        disabled={status === 'submitting'}
-        className="w-full bg-[#f25f22] text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-[#d94d15] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={status === 'loading'}
+        className="w-full bg-accent text-white px-8 py-4 rounded-lg font-semibold hover:bg-opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
       >
-        {status === 'submitting' ? 'Sending...' : 'Send Message'}
+        {status === 'loading' ? 'Sending...' : 'Send Message'}
       </button>
+
+      <p className="text-sm text-gray-600 text-center">
+        We respect your privacy. Your information will never be shared.
+      </p>
     </form>
   );
 }
