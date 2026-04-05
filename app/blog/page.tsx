@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function BlogPage() {
   const clientData = getClientData()
   const business = clientData.business
-  const posts = clientData.blog.posts
+  const posts = clientData.blog_posts
 
   // Sort posts by date (newest first)
   const sortedPosts = [...posts].sort(

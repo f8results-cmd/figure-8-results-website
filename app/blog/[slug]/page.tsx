@@ -13,14 +13,14 @@ interface BlogPostPageProps {
 
 export async function generateStaticParams() {
   const clientData = getClientData()
-  return clientData.blog.posts.map((post) => ({
+  return clientData.blog_posts.map((post) => ({
     slug: post.slug,
   }))
 }
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const clientData = getClientData()
-  const post = clientData.blog.posts.find((p) => p.slug === params.slug)
+  const post = clientData.blog_posts.find((p) => p.slug === params.slug)
 
   if (!post) {
     return {
@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
 export default function BlogPostPage({ params }: BlogPostPageProps) {
   const clientData = getClientData()
-  const post = clientData.blog.posts.find((p) => p.slug === params.slug)
+  const post = clientData.blog_posts.find((p) => p.slug === params.slug)
 
   if (!post) {
     notFound()
@@ -73,7 +73,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
   }
 
   // Get related posts (same category, excluding current)
-  const relatedPosts = clientData.blog.posts
+  const relatedPosts = clientData.blog_posts
     .filter((p) => p.category === post.category && p.slug !== post.slug)
     .slice(0, 3)
 
